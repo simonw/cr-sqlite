@@ -27,7 +27,7 @@ pub extern "C" fn crsql_init_site_id(db: *mut sqlite3, ret: *mut u8) -> c_int {
 
 fn create_site_id_and_site_id_table(db: *mut sqlite3) -> Result<[u8; 16], ResultCode> {
     db.exec_safe(&format!(
-        "CREATE TABLE \"{tbl}\" (site_id BLOB NOT NULL, ordinal INTEGER PRIMARY KEY AUTOINCREMENT);
+        "CREATE TABLE \"{tbl}\" (site_id BLOB NOT NULL, ordinal INTEGER PRIMARY KEY);
         CREATE UNIQUE INDEX {tbl}_site_id ON \"{tbl}\" (site_id);",
         tbl = consts::TBL_SITE_ID
     ))?;
@@ -223,3 +223,20 @@ fn create_clock_table(
         table_name = crate::util::escape_ident(table_name),
       ))
 }
+
+// TODO: create a primary key lookup table as well.
+// So we can store less per cell in the clock table.
+// The PK lookup table would be something like:
+// [pk_cols, col_name, ordinal]
+// or:
+// CREATE TABLE (ordinal integer primary key autoincrement, pk_cols, col_name)
+// col name in this separate table? hmm... it'll make it larger.
+// but it'll remove it from the clock table.
+// if you don't have it then the ordinal table is size of base table which is probably better.
+// since clock table size can't be reduced.
+// the clock table could have a rowid alias as the primary key though would be the advantage.
+// Alt:
+// CREATE TABLE pk_ordinal (ordinal integer primary key autoincrement, pk_list);
+// create unique index on pk_ordinal (pk_list);
+// CREATE TABLE clock (pk_ordinal, col_name, ..., primary key (pk_ordinal, col_name));
+// we don't need autoincrement apparenetly if we're aliasing rowid -- https://www.sqlite.org/autoinc.html
